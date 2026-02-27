@@ -118,7 +118,6 @@ int main(int argc, char** argv){
     }
 
     if (!bestPerPrefix.empty()) {
-        cout << "\n";
         for (const auto &p : bestPerPrefix) {
             cout << "Best movie with prefix " << p.first << " is: " << p.second.name
                  << " with rating " << fixed << setprecision(1) << p.second.rating << endl;
