@@ -120,10 +120,11 @@ int main(int argc, char** argv){
 
             // record best (first after sort)
             bestPerPrefix.emplace_back(prefix, matches.front());
+            
+            // extra blank line after each prefix block
+            cout << "\n";
         }
 
-        // extra blank line after each prefix block
-        cout << "\n";
     }
 
     if (!bestPerPrefix.empty()) {
