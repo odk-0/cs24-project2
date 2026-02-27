@@ -96,7 +96,7 @@ int main(int argc, char** argv){
         }
 
         if (matches.empty()) {
-            cout << "No movies found with prefix <" << prefix << ">" << endl;
+            cout << "No movies found with prefix " << prefix << endl;
         } else {
             // sort by rating (descending), then name (ascending)
             sort(matches.begin(), matches.end(), [](const Movie &a, const Movie &b){
@@ -110,10 +110,11 @@ int main(int argc, char** argv){
 
             // record best (first after sort)
             bestPerPrefix.emplace_back(prefix, matches.front());
+            // extra blank line after each prefix block
+            cout << "\n";
         }
 
-        // extra blank line after each prefix block
-        cout << "\n";
+        
     }
 
     if (!bestPerPrefix.empty()) {
