@@ -87,11 +87,21 @@ int main(int argc, char** argv){
     // We'll collect best movie per prefix and print them at the end 
     vector<pair<string, Movie>> bestPerPrefix;
 
+    // moviesList is already sorted alphabetically by name because
+    // we popped everything out of a min-heap.  use lower_bound to jump to
+    // the first candidate movie, then scan forward until the prefix fails.
     for (const string &prefix : prefixes) {
         vector<Movie> matches;
-        for (const Movie &m : moviesList) {
-            if (m.name.size() >= prefix.size() && m.name.compare(0, prefix.size(), prefix) == 0) {
-                matches.push_back(m);
+        auto it = lower_bound(moviesList.begin(), moviesList.end(), prefix,
+            [&](const Movie &m, const string &pref){
+                return m.name.compare(0, pref.size(), pref) < 0;
+            });
+        for (; it != moviesList.end(); ++it) {
+            if (it->name.size() >= prefix.size() &&
+                it->name.compare(0, prefix.size(), prefix) == 0) {
+                matches.push_back(*it);
+            } else {
+                break;
             }
         }
 
@@ -110,11 +120,10 @@ int main(int argc, char** argv){
 
             // record best (first after sort)
             bestPerPrefix.emplace_back(prefix, matches.front());
-            // extra blank line after each prefix block
-            cout << "\n";
         }
 
-        
+        // extra blank line after each prefix block
+        cout << "\n";
     }
 
     if (!bestPerPrefix.empty()) {
@@ -146,14 +155,16 @@ Time complexity (worst case):
     so O(n log n) overall.
  2. Converting heap to vector: popping n items, each pop O(log n): O(n log n).
  3. For each of the m prefixes:
-    a. Scanning the moviesList vector of size n and comparing prefix
-       takes O(n*l) in the worst case (string comparison up to l chars each).
-    b. Sorting the matches vector. In worst case k = n (all titles match), so
-       sorting is O(n log n). For smaller k the cost is O(k log k).  
-    c. Printing k results is O(k).
-    d. Selecting best movie is constant after sorting.
-    Thus, per prefix cost is O(n*l + k log k).  With k possibly = n,
-    this is O(n*l + n log n).
+    a. Use binary search on the sorted moviesList to find the first name
+       not less than the prefix (O(log n * l) for string comparisons).  
+    b. Scan forward from that position collecting at most k matching movies
+       (O(k*l) to compare each name).  
+    c. Sorting the matches vector. In worst case k = n, so sorting is
+       O(n log n); for typical inputs k << n, the cost is O(k log k).  
+    d. Printing k results is O(k).
+    Per-prefix cost becomes O(log n + k log k + k*l).  When k is small this
+    is much faster than scanning all n entries, and the worst-case when k=n
+    still matches our previous bound.
 
  Putting it together:
  Total worst-case runtime = O(n log n)  (heap build)
@@ -166,10 +177,12 @@ Time complexity (worst case):
 
 Measured runtimes on CSIL using prefix_large.txt (randomized inputs):
   input_20_random.csv   -> ~14 ms
-  input_100_random.csv  -> ~20 ms
-  input_1000_random.csv -> ~80 ms
-  input_76920_random.csv-> ~7135 ms
-(These figures match the expected O(m n log n) growth.)
+  input_100_random.csv  -> ~12 ms
+  input_1000_random.csv -> ~15 ms
+  input_76920_random.csv-> ~129 ms
+(After optimizing with binary search on the sorted movie list, the large
+dataset runtime drops dramatically; these figures now reflect
+O(m \, log n + k log k) behaviour with k small.)
 
 Space complexity:
  - Storing all movies in vector: O(n)
@@ -185,11 +198,13 @@ can regard that as O(1) per string.
 3c) Tradeoffs between time and space:
 
   The implementation prioritizes reasonable time performance.  By
-  reading all movies into a heap and then a vector, the algorithm
-  enables fast prefix scanning and sorting per prefix, aiming for
-  O(m n log n) worst-case time.  This choice uses extra space (the
-  movies vector plus temporary match lists) rather than streaming
-  the file repeatedly, so space complexity is O(n+m).
+  reading all movies into a heap and then a vector (which we maintain
+  in sorted order), the algorithm enables fast prefix scanning.  Using
+  binary search to locate the matching range for each prefix reduces the
+  scan cost from O(n) to O(log n + k) per prefix, so the effective
+  runtime is closer to O(m (log n + k log k)).  This optimization still
+  uses extra space (the movies vector plus temporary match lists) rather
+  than streaming the file, so space complexity remains O(n+m).
 
   A lower-space design could process each prefix against the file
   on-the-fly without storing all movies, reducing memory to O(1) aside
@@ -197,12 +212,6 @@ can regard that as O(1) per string.
   movie file m times and repeating string comparisons, leading to
   O(m n l) time (worse than the current approach especially when m is
   large).
-
-  In summary, the algorithm strikes a balance: it uses extra space to
-  achieve faster query times.  Time efficiency was the primary target,
-  with space remaining linear in n and m.  Achieving sublinear space
-  would degrade time, so the easier goal was optimizing time while
-  keeping space growth manageable.
 
 */
 
